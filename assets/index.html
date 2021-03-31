@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html class="no-js">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Weather Dashboard</title>
+    <meta name="description" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <nav class="navbar navbar-dark bg-dark">
+        <span class="navbar-brand mb-0 h1">Weather Dashboard</span>
+      </nav>
+    <div class="container" id="body-container">
+      <div class="row">
+        <div id="search-sidebar"><h5 class="card-title">Search for a city</h5>
+            <form class="form-inline" id="search-history">
+                <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search" id="city-input">
+                <button class="btn btn-outline-info my-2 my-sm-0" type="submit" id="search-btn">Search</button><br /><br />
+                <button type="button" class="btn btn-secondary" id="clear-btn">Clear history</button>
+              </form>
+        </div>
+        <div id="weather-dash">
+          <div class="row">
+          <div class="card" id="current-weather">
+              <div>
+                <div class="row" id="header-row">
+                  <p>Search for a city to view weather data.</p>
+                </div>
+                <div id="current-weather-data">
+                   </div>
+              </div>
+            </div>
+          </div>
+          <div class="row" ><h4 id="forecast-title"></h4></div>
+          <div class="row" id="forecast-row">
+            </div>
+        </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" 
+            integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" 
+            crossorigin="anonymous"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js" 
+                    integrity="sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==" 
+                    crossorigin="anonymous"></script>
+    <script src="script.js" type="text/javascript"></script>
+  
+  </body>
