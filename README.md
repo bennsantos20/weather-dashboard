@@ -5,5 +5,5 @@ This is a weather dashboard in which travelers can use to search cities in their
 
 ![weather-dashboard](./assets/images/screenshot.png)
 
-[Weather Dashboard]()
+[Weather Dashboard](https://bennsantos20.github.io/weather-dashboard/)
 
