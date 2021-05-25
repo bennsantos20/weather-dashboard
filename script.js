@@ -1,264 +1,211 @@
-
-$(function () {
-  //VARIABLES
-  //===========================================================================
-  const numberOfDaysToForecast = 5;
-  var searchHistoryArray = [];
-  const apiKey = "593c0385215d05c9409439d0b1361f3e";
-  const inputField = $("#city-input");
-  var cityName;
-  var todaysDate = moment().format("D MMMM YYYY");
-  var inputSwitch;
-  var listCity;
-  if (localStorage.getItem("Weather search history")) {
-    var arrayFromStorage = localStorage
-      .getItem("Weather search history")
-      .split(",");
+window.addEventListener('load', function () {
+  // Grab the existing history from local storage IF it exists
+  var existingHistory;
+  if (!JSON.parse(localStorage.getItem('history'))) {
+    existingHistory = [];
   } else {
-    var arrayFromStorage;
+    existingHistory = JSON.parse(localStorage.getItem('history'));
   }
-  // ===========================================================================
 
-  //EVENT LISTENERS
-  // ===========================================================================
+  var historyItems = [];
 
-  //Listen to search button
-  $("#search-btn").on("click", function () {
-    event.preventDefault();
-
-    if (inputField.val() === "") {
-      //if blank, do nothing
+  // Function to get the forecast, loop through only the days of the week and render data to the page
+  function getForecast(searchValue) {
+    if (!searchValue) {
       return;
-    } else {
-      inputSwitch = true;
-      showWeather();
     }
-  });
+    var endpoint = `http://api.openweathermap.org/data/2.5/forecast?q=${searchValue}&appid=d91f911bcf2c0f925fb6535547a5ddc9&units=imperial`;
+    fetch(endpoint)
+      .then((res) => res.json())
+      .then((data) => {
+        // Select our forecast element and add a header to it
+        var forecastEl = document.querySelector('#forecast');
+        forecastEl.innerHTML = '<h4 class="mt-3">5-Day Forecast:</h4>';
 
-  //listen to clear button
-  $("#clear-btn").on("click", function () {
-    console.log("clear");
-    localStorage.removeItem("Weather search history");
-    location.reload();
-  });
+        // Create a div and give it a class of row
+        forecastRowEl = document.createElement('div');
+        forecastRowEl.className = '"row"';
 
-  //listen to the items in the search history sidebar
-  $(document).on("click", ".list-group-item", function () {
-    inputSwitch = false;
-    listCity = $(this).text();
-    showWeather();
-  });
-  // ===========================================================================
+        // Loop over all forecasts (by 3-hour increments)
+        for (var i = 0; i < data.list.length; i++) {
+          // Only look at forecasts around 3:00pm
+          if (data.list[i].dt_txt.indexOf('15:00:00') !== -1) {
+            // Create HTML elements for a bootstrap card
+            var colEl = document.createElement('div');
+            colEl.classList.add('col-md-2');
+            var cardEl = document.createElement('div');
+            cardEl.classList.add('card', 'bg-primary', 'text-white');
+            var windEl = document.createElement('p');
+            windEl.classList.add('card-text');
+            windEl.textContent = `Wind Speed: ${data.list[i].wind.speed} MPH`;
+            var humidityEl = document.createElement('p');
+            humidityEl.classList.add('card-text');
+            humidityEl.textContent = `Humidity : ${data.list[i].main.humidity} %`;
+            var bodyEl = document.createElement('div');
+            bodyEl.classList.add('card-body', 'p-2');
+            var titleEl = document.createElement('h5');
+            titleEl.classList.add('card-title');
+            titleEl.textContent = new Date(
+              data.list[i].dt_txt
+            ).toLocaleDateString();
+            var imgEl = document.createElement('img');
+            imgEl.setAttribute(
+              'src',
+              `http://openweathermap.org/img/w/${data.list[i].weather[0].icon}.png`
+            );
+            var p1El = document.createElement('p');
+            p1El.classList.add('card-text');
+            p1El.textContent = `Temp: ${data.list[i].main.temp_max} °F`;
+            var p2El = document.createElement('p');
+            p2El.classList.add('card-text');
+            p2El.textContent = `Humidity: ${data.list[i].main.humidity}%`;
 
-  //FUNCTIONS
-  // ===========================================================================
-
-  //On page load, check local storage, and if there is a search history, display it.
-  function onLoad() {
-    $("#search-history-items").empty();
-
-    if (arrayFromStorage) {
-      searchHistoryArray = arrayFromStorage;
-    }
-
-    for (let i = 0; i < searchHistoryArray.length; i++) {
-      var aSearchTerm = $("<li>").text(searchHistoryArray[i]);
-      aSearchTerm.addClass("list-group-item");
-      $("#search-history-items").prepend(aSearchTerm);
-    }
-  }
-  onLoad();
-
-  function showWeather() {
-    event.preventDefault();
-
-    // Input switch tells the program whether the user is typing in a new a search term  or clicking on one of the previous search history items. The search term will be used in the currentWeatherQueryURL
-    if (inputSwitch) {
-      cityName = inputField.val();
-    } else {
-      cityName = listCity;
-    }
-
-    $("#header-row").empty();
-    $("#current-weather-data").empty();
-    $("#forecast-row").empty();
-
-    var currentWeatherQueryURL =
-      "https://api.openweathermap.org/data/2.5/weather?q=" +
-      cityName +
-      "&units=imperial&appid=" +
-      apiKey;
-
-    //API Calls begin
-    //=========================================================================
-    $.ajax({
-      url: currentWeatherQueryURL,
-      method: "GET",
-    }).then(function (response) {
-      //Now that we've got a response, change the cityName from whatever the user typed in to what the API actually returns as the "name"
-      cityName = response.name;
-
-      //VALIDATION CHECK: Check if city name is valid =======================
-      if (response) {
-        if (searchHistoryArray.includes(cityName) === false) {
-          //if city name is not present in the array
-          populateSearchBar();
+            // Merge together and put on page
+            colEl.appendChild(cardEl);
+            bodyEl.appendChild(titleEl);
+            bodyEl.appendChild(imgEl);
+            bodyEl.appendChild(windEl);
+            bodyEl.appendChild(humidityEl);
+            bodyEl.appendChild(p1El);
+            bodyEl.appendChild(p2El);
+            cardEl.appendChild(bodyEl);
+            forecastEl.appendChild(colEl);
+          }
         }
-      } else {
-        //TODO: no alert appears, idk if possible
-        alert("not a valid city name");
+      });
+  }
+
+  // Helper function to fetch and display the UV index
+  function getUVIndex(lat, lon) {
+    fetch(
+      `http://api.openweathermap.org/data/2.5/uvi?appid=d91f911bcf2c0f925fb6535547a5ddc9&lat=${lat}&lon=${lon}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        var bodyEl = document.querySelector('.card-body');
+        var uvEl = document.createElement('p');
+        uvEl.id = 'uv';
+        uvEl.textContent = 'UV Index: ';
+        var buttonEl = document.createElement('span');
+        buttonEl.classList.add('btn', 'btn-sm');
+        buttonEl.innerHTML = data.value;
+
+        switch (data.value) {
+          case data.value < 3:
+            buttonEl.classList.add('btn-success');
+            break;
+          case data.value < 7:
+            buttonEl.classList.add('btn-warning');
+            break;
+          default:
+            buttonEl.classList.add('btn-danger');
+        }
+
+        bodyEl.appendChild(uvEl);
+        uvEl.appendChild(buttonEl);
+      });
+  }
+
+  const handleHistory = (term) => {
+    if (existingHistory && existingHistory.length > 0) {
+      var existingEntries = JSON.parse(localStorage.getItem('history'));
+      var newHistory = [...existingEntries, term];
+      localStorage.setItem('history', JSON.stringify(newHistory));
+      // If there is no history, create one with the searchValue and save it localStorage
+    } else {
+      historyItems.push(term);
+      localStorage.setItem('history', JSON.stringify(historyItems));
+    }
+  };
+
+  // Function that preforms the actual API request and creates elements to render to the page
+  function searchWeather(searchValue) {
+    var endpoint = `http://api.openweathermap.org/data/2.5/weather?q=${searchValue}&appid=d91f911bcf2c0f925fb6535547a5ddc9&units=imperial`;
+    fetch(endpoint)
+      .then((res) => res.json())
+      .then((data) => {
+        // Invoke our history method
+        if (!existingHistory.includes(searchValue)) {
+          handleHistory(searchValue);
+        }
+        // Clear any old content
+        todayEl = document.querySelector('#today');
+        todayEl.textContent = ' ';
+
+        // Create html content for current weather
+        var titleEl = document.createElement('h3');
+        titleEl.classList.add('card-title');
+        titleEl.textContent = `${
+          data.name
+        } (${new Date().toLocaleDateString()})`;
+        var cardEl = document.createElement('div');
+        cardEl.classList.add('card');
+        var windEl = document.createElement('p');
+        windEl.classList.add('card-text');
+        var humidEl = document.createElement('p');
+        humidEl.classList.add('card-text');
+        var tempEl = document.createElement('p');
+        tempEl.classList.add('card-text');
+        humidEl.textContent = `Humidity: ${data.main.humidity} %`;
+        tempEl.textContent = `Temperature: ${data.main.temp} °F`;
+        var cardBodyEl = document.createElement('div');
+        cardBodyEl.classList.add('card-body');
+        var imgEl = document.createElement('img');
+        imgEl.setAttribute(
+          'src',
+          `http://openweathermap.org/img/w/${data.weather[0].icon}.png`
+        );
+
+        // Append all the content that we created
+        titleEl.appendChild(imgEl);
+        cardBodyEl.appendChild(titleEl);
+        cardBodyEl.appendChild(tempEl);
+        cardBodyEl.appendChild(humidEl);
+        cardBodyEl.appendChild(windEl);
+        cardEl.appendChild(cardBodyEl);
+        todayEl.appendChild(cardEl);
+
+        // Invoke our forecast and UV functions
+        getForecast(searchValue);
+        getUVIndex(data.coord.lat, data.coord.lon);
+      });
+  }
+
+  // Helper function to create a new row
+  function makeRow(searchValue) {
+    // Create a new `li` element and add classes/text to it
+    var liEl = document.createElement('li');
+    liEl.classList.add('list-group-item', 'list-group-item-action');
+    liEl.id = searchValue;
+    var text = searchValue;
+    liEl.textContent = text;
+
+    // Select the history element and add an event to it
+    liEl.addEventListener('click', (e) => {
+      if (e.target.tagName === 'LI') {
+        searchWeather(e.target.textContent);
       }
-
-      //If validation is ok, continue. ========================================
-
-      //Display header showing City, Date, and Icon
-      cityNameAndDate = $("<h4>").text(response.name + " (" + todaysDate + ")");
-      currentIconEl = $("<img id='current-weather-icon'>").attr(
-        "src",
-        "https://openweathermap.org/img/wn/" + response.weather[0].icon + ".png"
-      );
-      $("#header-row").append(cityNameAndDate, currentIconEl);
-
-      //Display current weather data
-      currentTempEl = $("<p>").text(
-        "Temperature: " + Math.round(response.main.temp) + " °F"
-      );
-      currentHumidityEl = $("<p>").text(
-        "Humidity: " + response.main.humidity + "%"
-      );
-      currentWindEl = $("<p>").text(
-        "Wind speed: " + Math.round(response.wind.speed) + " MPH"
-      );
-      //append them all together
-      $("#current-weather-data").append(
-        currentTempEl,
-        currentHumidityEl,
-        currentWindEl
-      );
-
-      //Grabbing variables with which to call for the UV index
-      var latitude = response.coord.lat;
-      var longitude = response.coord.lon;
-
-      //current UV index API Call
-      var currentUVQueryURL =
-        "https://api.openweathermap.org/data/2.5/uvi?appid=" +
-        apiKey +
-        "&lat=" +
-        latitude +
-        "&lon=" +
-        longitude;
-
-      $.ajax({
-        url: currentUVQueryURL,
-        method: "GET",
-      }).then(function (response) {
-        
-
-        currentUVLabel = $("<span>").text("UV Index: ");
-        currentUVBadge = $("<span>").text(response.value);
-        console.log(response.value);
-        //apply UV colors
-        if (response.value < 3) {
-          // green
-          currentUVBadge.addClass("uv uv-low");
-        } else if (response.value >= 3 && response.value < 6) {
-          //yellow
-          currentUVBadge.addClass("uv uv-med");
-        } else if (response.value >= 6 && response.value < 8) {
-          //orange
-          currentUVBadge.addClass("uv uv-high");
-        } else if (response.value >= 8 && response.value <= 10) {
-          //red
-          currentUVBadge.addClass("uv uv-very-high");
-        } else {
-          //purple
-          currentUVBadge.addClass("uv uv-extreme");
-        }
-
-        $("#current-weather-data").append(currentUVLabel, currentUVBadge);
-      });
-
-      //Forecast call
-      var forecastQueryURL =
-        "https://api.openweathermap.org/data/2.5/onecall?units=imperial&lat=" +
-        latitude +
-        "&lon=" +
-        longitude +
-        "&exclude=current,minutely,hourly&appid=" +
-        apiKey;
-
-      $.ajax({
-        url: forecastQueryURL,
-        method: "GET",
-      }).then(function (response) {
-        $("#forecast-title").text("5-day Forecast");
-        //Loop to create forecast cards. See HTML file for a reference of how this looks when built. (the loops tarts on index 1 because 0 is today I'm not trying to call today's weather)
-        for (let i = 1; i < numberOfDaysToForecast + 1; i++) {
-          //create a card
-          var forecastCard = $("<div class='card forecast card-body'>");
-
-          //title of card: day of the week
-          var forecastDayEl = $("<h5>");
-          //fetch unix timestamp and convert to day of the week
-          var unixSeconds = response.daily[i].dt;
-          var unixMilliseconds = unixSeconds * 1000;
-          var forecastDateUnix = new Date(unixMilliseconds);
-          var forecastDoW = forecastDateUnix.toLocaleString("en-US", {
-            weekday: "long",
-          });
-          forecastDayEl.text(forecastDoW);
-
-          // create hr
-          var hrLine = $("<hr />");
-
-          // create p to hold icon
-          var iconPara = $("<p>");
-          //create icon and append to p
-          var iconImg = $("<img>");
-          iconImg.attr(
-            "src",
-            "http://openweathermap.org/img/wn/" +
-              response.daily[i].weather[0].icon +
-              ".png"
-          );
-          iconPara.append(iconImg);
-
-          //create P to hold temp
-          var tempPara = $("<p>").text(
-            "Temp: " + Math.round(response.daily[i].temp.day) + " °F"
-          );
-
-          //create p to hold humidity
-          var humidPara = $("<p>").text(
-            "Humidity: " + response.daily[i].humidity + "%"
-          );
-
-          //append it all together
-          forecastCard.append(
-            forecastDayEl,
-            hrLine,
-            iconPara,
-            tempPara,
-            humidPara
-          );
-          $("#forecast-row").append(forecastCard);
-        }
-      });
-      // end of forecast call
     });
+    document.getElementById('history').appendChild(liEl);
   }
-  function populateSearchBar() {
-    $("#search-history-items").empty();
 
-    searchHistoryArray.push(cityName);
-    console.log("searchHistoryArray: " + searchHistoryArray);
-    localStorage.setItem("Weather search history", searchHistoryArray);
+  // Render existing history to the page.
+  if (existingHistory && existingHistory.length > 0) {
+    existingHistory.forEach((item) => makeRow(item));
+  }
 
-    for (let i = 0; i < searchHistoryArray.length; i++) {
-      var aSearchTerm = $("<li>").text(searchHistoryArray[i]);
-      aSearchTerm.addClass("list-group-item");
-      $("#search-history-items").prepend(aSearchTerm);
+  // Helper function to get a search value.
+  function getSearchVal() {
+    var searchValue = document.querySelector('#search-value').value;
+    if (searchValue) {
+      searchWeather(searchValue);
+      makeRow(searchValue);
+      document.querySelector('#search-value').value = '';
     }
   }
+
+  // Attach our getSearchVal function to the search button
+  document
+    .querySelector('#search-button')
+    .addEventListener('click', getSearchVal);
 });
