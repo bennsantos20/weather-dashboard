@@ -1,3 +1,4 @@
+
 $(function () {
   //VARIABLES
   //===========================================================================
@@ -16,10 +17,17 @@ $(function () {
   } else {
     var arrayFromStorage;
   }
+  // ===========================================================================
+
+  //EVENT LISTENERS
+  // ===========================================================================
+
+  //Listen to search button
   $("#search-btn").on("click", function () {
     event.preventDefault();
 
     if (inputField.val() === "") {
+      //if blank, do nothing
       return;
     } else {
       inputSwitch = true;
@@ -27,18 +35,25 @@ $(function () {
     }
   });
 
+  //listen to clear button
   $("#clear-btn").on("click", function () {
     console.log("clear");
     localStorage.removeItem("Weather search history");
     location.reload();
   });
 
+  //listen to the items in the search history sidebar
   $(document).on("click", ".list-group-item", function () {
     inputSwitch = false;
     listCity = $(this).text();
     showWeather();
   });
+  // ===========================================================================
 
+  //FUNCTIONS
+  // ===========================================================================
+
+  //On page load, check local storage, and if there is a search history, display it.
   function onLoad() {
     $("#search-history-items").empty();
 
@@ -57,6 +72,7 @@ $(function () {
   function showWeather() {
     event.preventDefault();
 
+    // Input switch tells the program whether the user is typing in a new a search term  or clicking on one of the previous search history items. The search term will be used in the currentWeatherQueryURL
     if (inputSwitch) {
       cityName = inputField.val();
     } else {
@@ -73,20 +89,29 @@ $(function () {
       "&units=imperial&appid=" +
       apiKey;
 
+    //API Calls begin
+    //=========================================================================
     $.ajax({
       url: currentWeatherQueryURL,
       method: "GET",
     }).then(function (response) {
+      //Now that we've got a response, change the cityName from whatever the user typed in to what the API actually returns as the "name"
       cityName = response.name;
+
+      //VALIDATION CHECK: Check if city name is valid =======================
       if (response) {
         if (searchHistoryArray.includes(cityName) === false) {
+          //if city name is not present in the array
           populateSearchBar();
         }
       } else {
+        //TODO: no alert appears, idk if possible
         alert("not a valid city name");
       }
 
+      //If validation is ok, continue. ========================================
 
+      //Display header showing City, Date, and Icon
       cityNameAndDate = $("<h4>").text(response.name + " (" + todaysDate + ")");
       currentIconEl = $("<img id='current-weather-icon'>").attr(
         "src",
@@ -94,7 +119,7 @@ $(function () {
       );
       $("#header-row").append(cityNameAndDate, currentIconEl);
 
-
+      //Display current weather data
       currentTempEl = $("<p>").text(
         "Temperature: " + Math.round(response.main.temp) + " °F"
       );
@@ -104,13 +129,14 @@ $(function () {
       currentWindEl = $("<p>").text(
         "Wind speed: " + Math.round(response.wind.speed) + " MPH"
       );
+      //append them all together
       $("#current-weather-data").append(
         currentTempEl,
         currentHumidityEl,
         currentWindEl
       );
 
-
+      //Grabbing variables with which to call for the UV index
       var latitude = response.coord.lat;
       var longitude = response.coord.lon;
 
@@ -167,11 +193,14 @@ $(function () {
         method: "GET",
       }).then(function (response) {
         $("#forecast-title").text("5-day Forecast");
+        //Loop to create forecast cards. See HTML file for a reference of how this looks when built. (the loops tarts on index 1 because 0 is today I'm not trying to call today's weather)
         for (let i = 1; i < numberOfDaysToForecast + 1; i++) {
           //create a card
           var forecastCard = $("<div class='card forecast card-body'>");
 
+          //title of card: day of the week
           var forecastDayEl = $("<h5>");
+          //fetch unix timestamp and convert to day of the week
           var unixSeconds = response.daily[i].dt;
           var unixMilliseconds = unixSeconds * 1000;
           var forecastDateUnix = new Date(unixMilliseconds);
@@ -180,9 +209,12 @@ $(function () {
           });
           forecastDayEl.text(forecastDoW);
 
+          // create hr
           var hrLine = $("<hr />");
 
+          // create p to hold icon
           var iconPara = $("<p>");
+          //create icon and append to p
           var iconImg = $("<img>");
           iconImg.attr(
             "src",
@@ -192,14 +224,17 @@ $(function () {
           );
           iconPara.append(iconImg);
 
+          //create P to hold temp
           var tempPara = $("<p>").text(
             "Temp: " + Math.round(response.daily[i].temp.day) + " °F"
           );
 
+          //create p to hold humidity
           var humidPara = $("<p>").text(
             "Humidity: " + response.daily[i].humidity + "%"
           );
 
+          //append it all together
           forecastCard.append(
             forecastDayEl,
             hrLine,
@@ -210,6 +245,7 @@ $(function () {
           $("#forecast-row").append(forecastCard);
         }
       });
+      // end of forecast call
     });
   }
   function populateSearchBar() {
